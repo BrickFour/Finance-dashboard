@@ -134,10 +134,10 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <AppProvider>
-      <Router>
+    <Router>
+      <AppProvider>
         <AppRoutes />
-      </Router>
-    </AppProvider>
+      </AppProvider>
+    </Router>
   );
 }

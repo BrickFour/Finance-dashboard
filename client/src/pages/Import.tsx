@@ -160,7 +160,7 @@ type Step = 'category' | 'upload' | 'mapping' | 'validate' | 'done';
 /* ---------------------------------------------------------------- component */
 
 export function ImportPage() {
-  const { company, financialYear, can, currency } = useApp();
+  const { company, financialYear, can, currency, refreshCompanies } = useApp();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const toasts = useToasts();
@@ -302,6 +302,7 @@ export function ImportPage() {
       });
       setCommitResult(res);
       setStep('done');
+      void refreshCompanies().catch(() => undefined);
       toasts.success('Import complete', `${res.result.accepted} record(s) accepted.`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'The import could not be completed. No data was changed.');

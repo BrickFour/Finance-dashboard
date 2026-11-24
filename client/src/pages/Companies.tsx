@@ -42,12 +42,13 @@ interface CompanyRow {
   currency: string;
   currencyScale: number;
   isDemo: boolean;
+  isSample?: boolean;
   financialYears: { id: string; label: string; startDate: string; endDate: string }[];
   lastImport: { at: string; fileName: string; category: string } | null;
 }
 
 export function CompaniesPage() {
-  const { can, selectCompany, company: active, refreshCompanies } = useApp();
+  const { can, selectCompany, selectedCompany: active, refreshCompanies } = useApp();
   const toasts = useToasts();
 
   const [companies, setCompanies] = useState<CompanyRow[]>([]);
@@ -112,7 +113,7 @@ export function CompaniesPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <h2 className="text-sm font-semibold text-ink">{c.name}</h2>
                       {c.id === active?.id && <Badge tone="brand">Selected</Badge>}
-                      {c.isDemo && <Badge tone="warning">Demo — synthetic data</Badge>}
+                      {c.isSample ? <Badge tone="warning">Sample company — demo data, read-only</Badge> : c.isDemo && <Badge tone="warning">Demo — synthetic data</Badge>}
                     </div>
                     <p className="text-xs text-ink-muted mt-1">
                       {c.entityLabel} · {c.currency}
@@ -132,7 +133,7 @@ export function CompaniesPage() {
                         Select
                       </Button>
                     )}
-                    {can('companies.manage') && (
+                    {can('companies.manage') && !c.isSample && (
                       <Button size="sm" icon={<CalendarPlus className="w-3.5 h-3.5" />} onClick={() => setFyFor(c)}>
                         Add financial year
                       </Button>
@@ -176,10 +177,11 @@ export function CompaniesPage() {
       <CreateCompanyDialog
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        onCreated={async () => {
+        onCreated={async (id) => {
           setCreateOpen(false);
           await load();
           await refreshCompanies();
+          selectCompany(id);
           toasts.success('Company created');
         }}
       />
@@ -190,6 +192,7 @@ export function CompaniesPage() {
         onCreated={async () => {
           setFyFor(null);
           await load();
+          await refreshCompanies();
           toasts.success('Financial year added');
         }}
       />
@@ -199,7 +202,7 @@ export function CompaniesPage() {
   );
 }
 
-function CreateCompanyDialog({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
+function CreateCompanyDialog({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (id: string) => void }) {
   const [form, setForm] = useState({
     name: '',
     legalName: '',
@@ -221,9 +224,9 @@ function CreateCompanyDialog({ open, onClose, onCreated }: { open: boolean; onCl
     setError(null);
     setFieldErrors({});
     try {
-      await api.post('/companies', { ...form, gstin: form.gstin || undefined, pan: form.pan || undefined });
+      const res = await api.post<{ company: { id: string } }>('/companies', { ...form, gstin: form.gstin || undefined, pan: form.pan || undefined });
       setForm({ ...form, name: '', legalName: '', gstin: '', pan: '', address: '' });
-      onCreated();
+      onCreated(res.company.id);
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);

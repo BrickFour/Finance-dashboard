@@ -40,6 +40,8 @@ COPY --from=server-build /build/server/node_modules ./node_modules
 COPY --from=server-build /build/server/dist ./dist
 COPY --from=server-build /build/server/package.json ./package.json
 COPY server/assets ./assets
+# Sample workbooks for the read-only demo company built on first start (DEMO_DATA=false to skip).
+COPY dhyeya-demo-data.zip /app/dhyeya-demo-data.zip
 # The server serves ../client/dist relative to the server root.
 COPY --from=client-build /build/client/dist /app/client/dist
 

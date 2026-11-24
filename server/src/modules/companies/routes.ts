@@ -6,6 +6,7 @@ import { authenticate, requireCapability, resolveCompany, accessibleCompanyIds }
 import { badRequest, conflict, notFound } from '../../lib/errors.js';
 import { newId, nowIso } from '../../lib/ids.js';
 import { recordAudit } from '../audit/service.js';
+import { isSampleCompany } from '../demo/constants.js';
 
 export const companiesRouter = Router();
 companiesRouter.use(authenticate);
@@ -339,6 +340,7 @@ export function serialiseCompany(row: Record<string, any>) {
     country: row.country,
     address: row.address ?? null,
     isDemo: dialect.bool(row.is_demo),
+    isSample: isSampleCompany(row.id),
     isActive: dialect.bool(row.is_active),
     createdAt: row.created_at,
   };

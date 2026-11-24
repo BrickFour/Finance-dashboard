@@ -56,6 +56,21 @@ export function getActiveCompanyId() {
   return activeCompanyId;
 }
 
+/**
+ * The company the current page is showing, when it differs from the user's saved
+ * choice (a report page shows the sample company while the chosen one is empty).
+ * Not persisted: it only decides which company requests are sent for.
+ */
+let requestCompanyId: string | null = null;
+
+export function setRequestCompanyId(id: string | null) {
+  requestCompanyId = id;
+}
+
+function headerCompanyId() {
+  return requestCompanyId ?? activeCompanyId;
+}
+
 type Query = Record<string, string | number | boolean | null | undefined>;
 
 export function buildQuery(params: Query): string {
@@ -80,7 +95,8 @@ interface RequestOptions {
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = {};
   if (authToken) headers.Authorization = `Bearer ${authToken}`;
-  if (activeCompanyId && !options.noCompany) headers['x-company-id'] = activeCompanyId;
+  const companyId = headerCompanyId();
+  if (companyId && !options.noCompany) headers['x-company-id'] = companyId;
 
   let body: BodyInit | undefined;
   if (options.body instanceof FormData) {
@@ -129,7 +145,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 export async function download(path: string, query?: Query, fallbackName = 'dhyeya-export'): Promise<void> {
   const headers: Record<string, string> = {};
   if (authToken) headers.Authorization = `Bearer ${authToken}`;
-  if (activeCompanyId) headers['x-company-id'] = activeCompanyId;
+  const companyId = headerCompanyId();
+  if (companyId) headers['x-company-id'] = companyId;
 
   const res = await fetch(`${BASE}${path}${query ? buildQuery(query) : ''}`, { headers });
 

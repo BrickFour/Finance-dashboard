@@ -3,6 +3,7 @@ import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { db, closeDb, normalizeMigrationNames } from './db/index.js';
 import { logger } from './lib/logger.js';
+import { ensureSampleCompany } from './modules/demo/service.js';
 
 async function main() {
   // The upload directory holds financial source documents. 0700 keeps it readable
@@ -31,6 +32,14 @@ async function main() {
   } catch (err) {
     logger.error('Could not reach the database.', { reason: err instanceof Error ? err.message : String(err) });
     process.exit(1);
+  }
+
+  // The sample company lets a new client see the product working before they
+  // import anything. Failing to build it must never stop the server.
+  try {
+    await ensureSampleCompany();
+  } catch (err) {
+    logger.warn('The sample company could not be created.', { reason: err instanceof Error ? err.message : String(err) });
   }
 
   const app = createApp();

@@ -10,6 +10,7 @@
     "migrate": "tsx src/db/cli.ts migrate",
     "rollback": "tsx src/db/cli.ts rollback",
     "seed": "tsx src/db/cli.ts seed",
+    "seed:demo": "tsx src/db/cli.ts seed-demo",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "tsx tests/e2e.ts",
@@ -31,7 +32,7 @@
     "zod": "^3.24.1"
   },
   "optionalDependencies": {
-    "better-sqlite3": "^11.7.0",
+    "better-sqlite3": "^12.11.1",
     "pg": "^8.13.1"
   },
   "devDependencies": {

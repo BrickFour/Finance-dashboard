@@ -1,15 +1,70 @@
 import { useEffect, useState } from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
-import { ChevronRight, Home } from 'lucide-react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Building2, ChevronRight, Home, Upload } from 'lucide-react';
+import { Button, Callout } from '@/components/ui';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { findNavItem } from './navigation';
 import { useApp } from '@/state/AppContext';
 import { cx } from '@/lib/format';
 
+/**
+ * Explains, on every page where it applies, that the figures are sample data and
+ * how to replace them with the company's own.
+ */
+function SampleDataBanner() {
+  const { previewingSample, selectedCompany, sampleCompany, can } = useApp();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  if (previewingSample && selectedCompany && sampleCompany) {
+    return (
+      <Callout
+        tone="warning"
+        className="mb-4 no-print"
+        title="You are viewing sample data"
+        actions={
+          can('imports.create') && (
+            <Button variant="primary" size="sm" icon={<Upload className="w-3.5 h-3.5" />} onClick={() => navigate('/import')}>
+              Import {selectedCompany.name}'s data
+            </Button>
+          )
+        }
+      >
+        Nothing has been imported for <strong>{selectedCompany.name}</strong> yet, so this page shows the demo company{' '}
+        <strong>{sampleCompany.name}</strong> to show what the dashboard produces. Once you import your chart of accounts, opening
+        balances or vouchers, your own figures replace the sample automatically.
+      </Callout>
+    );
+  }
+
+  if (selectedCompany?.isSample && location.pathname !== '/profile') {
+    return (
+      <Callout
+        tone="info"
+        className="mb-4 no-print"
+        title="Demo company: sample data, read-only"
+        actions={
+          can('companies.manage') && (
+            <Button variant="primary" size="sm" icon={<Building2 className="w-3.5 h-3.5" />} onClick={() => navigate('/companies')}>
+              Add your company
+            </Button>
+          )
+        }
+      >
+        Every figure here comes from the bundled demo workbooks for a fictional manufacturer, imported through the same pipeline your
+        own files will use. Explore any module and click a figure to drill down to its vouchers. To work with your own numbers, create
+        your company and import its Excel files.
+      </Callout>
+    );
+  }
+
+  return null;
+}
+
 export function AppShell() {
   const location = useLocation();
-  const { company } = useApp();
+  const { selectedCompany: company } = useApp();
 
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('dhyeya_nav_collapsed') === '1');
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -63,6 +118,8 @@ export function AppShell() {
               )}
             </nav>
           )}
+
+          <SampleDataBanner />
 
           <Outlet />
         </main>

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api, setAuthToken, setActiveCompanyId, getAuthToken, getActiveCompanyId, ApiError } from '@/lib/api';
+import { useLocation } from 'react-router-dom';
+import { api, setAuthToken, setActiveCompanyId, setRequestCompanyId, getAuthToken, getActiveCompanyId, ApiError } from '@/lib/api';
 import type { CurrencyConfig } from '@/lib/format';
 
 export type Role = 'admin' | 'finance' | 'executive' | 'sales';
@@ -23,6 +24,10 @@ export interface Company {
   currency: string;
   currencyScale: number;
   isDemo: boolean;
+  /** The built-in, read-only sample company created from the demo workbooks. */
+  isSample?: boolean;
+  /** Whether any vouchers or opening balances have been imported yet. */
+  hasData?: boolean;
   gstin?: string | null;
 }
 
@@ -42,10 +47,37 @@ export interface PeriodSelection {
   to?: string;
 }
 
+/**
+ * Report pages that show the sample company's figures while the selected company
+ * has nothing imported. Data-entry pages (import, mapping, companies, settings…)
+ * always work on the company the user actually selected.
+ */
+const SAMPLE_PREVIEW_PATHS = new Set([
+  '/',
+  '/cash-and-bank',
+  '/receivables',
+  '/payables',
+  '/cash-flow-forecast',
+  '/expenses',
+  '/budgets',
+  '/profit-and-loss',
+  '/balance-sheet',
+  '/equity',
+  '/ratios',
+  '/reports',
+  '/alerts',
+]);
+
 interface AppState {
   user: User | null;
   companies: Company[];
+  /** The company whose figures the current page shows (may be the sample company). */
   company: Company | null;
+  /** The company the user chose in the company switcher. */
+  selectedCompany: Company | null;
+  sampleCompany: Company | null;
+  /** True when the page shows the sample company because the selected one has no data yet. */
+  previewingSample: boolean;
   financialYears: FinancialYear[];
   financialYear: FinancialYear | null;
   period: PeriodSelection;
@@ -67,15 +99,49 @@ interface AppState {
 
 const AppContext = createContext<AppState | null>(null);
 
+/** The stored choice if it still exists, else a real company (with data first), else the sample. */
+function chooseCompany(list: Company[], stored: string | null): Company | null {
+  return (
+    list.find((c) => c.id === stored) ??
+    list.find((c) => !c.isSample && c.hasData) ??
+    list.find((c) => !c.isSample) ??
+    list[0] ??
+    null
+  );
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
+  const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [company, setCompany] = useState<Company | null>(null);
-  const [financialYears, setFinancialYears] = useState<FinancialYear[]>([]);
-  const [financialYear, setFinancialYear] = useState<FinancialYear | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [fyCache, setFyCache] = useState<Record<string, FinancialYear[]>>({});
+  const [fyChoice, setFyChoice] = useState<Record<string, string>>({});
   const [period, setPeriodState] = useState<PeriodSelection>({ type: 'financial_year' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const selectedCompany = companies.find((c) => c.id === selectedId) ?? null;
+  const sampleCompany = companies.find((c) => c.isSample) ?? null;
+  const previewingSample = Boolean(
+    SAMPLE_PREVIEW_PATHS.has(location.pathname) &&
+      sampleCompany &&
+      selectedCompany &&
+      !selectedCompany.isSample &&
+      !selectedCompany.hasData,
+  );
+  const company = previewingSample ? sampleCompany : selectedCompany;
+
+  // Set before children render, so every request a page makes on mount carries
+  // the company that page is showing. The persisted choice stays the user's own.
+  setRequestCompanyId(company?.id ?? null);
+
+  const applyCompanies = useCallback((list: Company[], preferId?: string | null) => {
+    setCompanies(list);
+    const chosen = chooseCompany(list, preferId ?? getActiveCompanyId());
+    setSelectedId(chosen?.id ?? null);
+    setActiveCompanyId(chosen?.id ?? null);
+  }, []);
 
   const loadSession = useCallback(async () => {
     if (!getAuthToken()) {
@@ -85,12 +151,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const res = await api.get<{ user: User; companies: Company[] }>('/auth/me', undefined, { noCompany: true });
       setUser(res.user);
-      setCompanies(res.companies);
-
-      const stored = getActiveCompanyId();
-      const chosen = res.companies.find((c) => c.id === stored) ?? res.companies[0] ?? null;
-      setCompany(chosen);
-      setActiveCompanyId(chosen?.id ?? null);
+      applyCompanies(res.companies);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setAuthToken(null);
@@ -101,59 +162,54 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applyCompanies]);
 
   useEffect(() => {
     void loadSession();
   }, [loadSession]);
 
-  // Financial years follow the selected company.
+  // Financial years follow the company being shown, cached per company so moving
+  // between a report page and an import page does not refetch them.
+  const companyId = company?.id ?? null;
   useEffect(() => {
-    if (!company) {
-      setFinancialYears([]);
-      setFinancialYear(null);
-      return;
-    }
+    if (!companyId || fyCache[companyId]) return;
     let cancelled = false;
 
     void (async () => {
       try {
-        const res = await api.get<{ financialYears: FinancialYear[] }>(
-          `/companies/${company.id}/financial-years`,
-          { companyId: company.id },
-        );
-        if (cancelled) return;
-
-        setFinancialYears(res.financialYears);
-
-        // Prefer the year containing today, then the most recent.
-        const today = new Date().toISOString().slice(0, 10);
-        const current = res.financialYears.find((f) => f.startDate <= today && f.endDate >= today);
-        setFinancialYear(current ?? res.financialYears[0] ?? null);
+        const res = await api.get<{ financialYears: FinancialYear[] }>(`/companies/${companyId}/financial-years`, { companyId });
+        if (!cancelled) setFyCache((prev) => ({ ...prev, [companyId]: res.financialYears }));
       } catch {
-        if (!cancelled) {
-          setFinancialYears([]);
-          setFinancialYear(null);
-        }
+        if (!cancelled) setFyCache((prev) => ({ ...prev, [companyId]: [] }));
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [company]);
+  }, [companyId, fyCache]);
 
-  const login = useCallback(async (email: string, password: string) => {
-    const res = await api.post<{ token: string; user: User }>('/auth/login', { email, password });
-    setAuthToken(res.token);
-    setUser(res.user);
+  const financialYears = useMemo(() => (companyId ? fyCache[companyId] ?? [] : []), [companyId, fyCache]);
+  const financialYear = useMemo(() => {
+    if (!companyId || !financialYears.length) return null;
+    const chosen = financialYears.find((f) => f.id === fyChoice[companyId]);
+    if (chosen) return chosen;
+    // Prefer the year containing today, then the most recent.
+    const today = new Date().toISOString().slice(0, 10);
+    return financialYears.find((f) => f.startDate <= today && f.endDate >= today) ?? financialYears[0];
+  }, [companyId, financialYears, fyChoice]);
 
-    const me = await api.get<{ user: User; companies: Company[] }>('/auth/me', undefined, { noCompany: true });
-    setCompanies(me.companies);
-    const chosen = me.companies[0] ?? null;
-    setCompany(chosen);
-    setActiveCompanyId(chosen?.id ?? null);
-  }, []);
+  const login = useCallback(
+    async (email: string, password: string) => {
+      const res = await api.post<{ token: string; user: User }>('/auth/login', { email, password });
+      setAuthToken(res.token);
+      setUser(res.user);
+
+      const me = await api.get<{ user: User; companies: Company[] }>('/auth/me', undefined, { noCompany: true });
+      applyCompanies(me.companies, null);
+    },
+    [applyCompanies],
+  );
 
   const logout = useCallback(async () => {
     try {
@@ -165,41 +221,61 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setActiveCompanyId(null);
     setUser(null);
     setCompanies([]);
-    setCompany(null);
+    setSelectedId(null);
+    setFyCache({});
+    setFyChoice({});
   }, []);
 
-  const selectCompany = useCallback(
-    (id: string) => {
-      const next = companies.find((c) => c.id === id);
-      if (!next) return;
-      setCompany(next);
-      setActiveCompanyId(next.id);
-      // A period chosen for another company's year would silently mislead.
-      setPeriodState({ type: 'financial_year' });
-    },
-    [companies],
-  );
+  const selectCompany = useCallback((id: string) => {
+    setSelectedId(id);
+    setActiveCompanyId(id);
+    // A period chosen for another company's year would silently mislead.
+    setPeriodState({ type: 'financial_year' });
+  }, []);
 
   const selectFinancialYear = useCallback(
     (id: string) => {
-      const next = financialYears.find((f) => f.id === id);
-      if (next) {
-        setFinancialYear(next);
+      if (!companyId) return;
+      if (financialYears.some((f) => f.id === id)) {
+        setFyChoice((prev) => ({ ...prev, [companyId]: id }));
         setPeriodState({ type: 'financial_year' });
       }
     },
-    [financialYears],
+    [companyId, financialYears],
   );
 
   const refreshCompanies = useCallback(async () => {
     const me = await api.get<{ user: User; companies: Company[] }>('/auth/me', undefined, { noCompany: true });
     setCompanies(me.companies);
-    if (!me.companies.find((c) => c.id === company?.id)) {
-      const next = me.companies[0] ?? null;
-      setCompany(next);
+    setFyCache({});
+    if (!me.companies.find((c) => c.id === selectedId)) {
+      const next = chooseCompany(me.companies, null);
+      setSelectedId(next?.id ?? null);
       setActiveCompanyId(next?.id ?? null);
     }
-  }, [company?.id]);
+  }, [selectedId]);
+
+  // While the selected company is still empty, re-check on every navigation so
+  // its own figures replace the sample as soon as an import lands.
+  const waitingForData = Boolean(user && selectedCompany && !selectedCompany.isSample && !selectedCompany.hasData);
+  useEffect(() => {
+    if (!waitingForData) return;
+    let cancelled = false;
+    void api
+      .get<{ user: User; companies: Company[] }>('/auth/me', undefined, { noCompany: true })
+      .then((me) => {
+        if (cancelled) return;
+        const fresh = me.companies.find((c) => c.id === selectedId);
+        if (fresh?.hasData) {
+          setCompanies(me.companies);
+          setFyCache({});
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [location.pathname, waitingForData, selectedId]);
 
   const refreshUser = useCallback(async () => {
     const me = await api.get<{ user: User; companies: Company[] }>('/auth/me', undefined, { noCompany: true });
@@ -213,6 +289,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       user,
       companies,
       company,
+      selectedCompany,
+      sampleCompany,
+      previewingSample,
       financialYears,
       financialYear,
       period,
@@ -236,8 +315,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       },
     }),
     [
-      user, companies, company, financialYears, financialYear, period, loading, error,
-      login, logout, selectCompany, selectFinancialYear, refreshCompanies, refreshUser, can,
+      user, companies, company, selectedCompany, sampleCompany, previewingSample, financialYears, financialYear, period,
+      loading, error, login, logout, selectCompany, selectFinancialYear, refreshCompanies, refreshUser, can,
     ],
   );
 

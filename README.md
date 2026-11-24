@@ -71,8 +71,23 @@ The account is flagged to force a password change at first sign-in. Set
 `BOOTSTRAP_ADMIN_EMAIL` / `BOOTSTRAP_ADMIN_PASSWORD` before seeding to choose
 your own.
 
-> The seed creates **no company and no financial data**. A fresh install opens on
-> the onboarding screen, which is the correct empty state.
+### Sample company (demo data)
+
+On first start the server builds a read-only **sample company** from
+`dhyeya-demo-data.zip` (or the unpacked `demo-data/` folder), running all 14
+workbooks through the normal bulk-import pipeline and confirming the suggested
+account mappings. That way a client sees a working dashboard, statements, ratios,
+ageing and forecast straight away.
+
+- Every user can view the sample company; nobody can change it (the server refuses writes).
+- When a company has **no imported vouchers or opening balances yet**, the report
+  pages show the sample company's figures in its place, under a clear
+  "You are viewing sample data" banner. As soon as that company's own data is
+  imported, its real figures replace the sample automatically.
+- Import, mapping, companies and settings pages always work on the company you selected.
+- `DEMO_DATA=false` turns the sample company off. `DEMO_DATA_PATH` points at a
+  different zip or folder. To rebuild it: `node dist/db/cli.js seed-demo --reset`
+  (or `npm run seed:demo -- --reset`).
 
 ### Production build
 
@@ -224,6 +239,8 @@ Every variable is optional for local development. See `server/.env.example`.
 | `AI_PROVIDER` / `AI_API_KEY` | unset | Unset ⇒ AI reports *not configured* |
 | `CRM_PROVIDER` / `CRM_API_KEY` / `CRM_BASE_URL` | unset | Unset ⇒ CRM reports *not connected* |
 | `SMTP_URL` | unset | Unset ⇒ scheduled delivery reports *not deployed* |
+| `DEMO_DATA` | `true` | `false` ⇒ no sample company is created |
+| `DEMO_DATA_PATH` | repo root | A different demo `.zip` or folder of workbooks |
 
 Uploaded workbooks are stored outside the web root and are only retrievable
 through an authenticated, company-scoped route.

@@ -45,7 +45,7 @@ const MAX_FILES = 40;
  * needs a hand-made mapping.
  */
 export function BulkImport() {
-  const { company, financialYear } = useApp();
+  const { company, financialYear, refreshCompanies } = useApp();
   const inputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [dragging, setDragging] = useState(false);
@@ -82,6 +82,7 @@ export function BulkImport() {
       const res = await api.post<BulkResponse>('/imports/bulk', form);
       setResponse(res);
       setFiles([]);
+      void refreshCompanies().catch(() => undefined);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'The files could not be imported.');
     } finally {

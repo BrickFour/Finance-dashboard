@@ -30,6 +30,11 @@ async function main() {
     }
     case 'seed': {
       await db.seed.run();
+      // The demo company needs the administrator the seed just created.
+      const { ensureSampleCompany } = await import('../modules/demo/service.js');
+      await ensureSampleCompany().catch((err) =>
+        console.warn('Sample company could not be created:', err instanceof Error ? err.message : err),
+      );
       console.log('Seed complete.');
       break;
     }
@@ -53,13 +58,26 @@ async function main() {
       console.log(`Administrator ${email} is ready. Remove RESET_ADMIN from the environment now.`);
       break;
     }
+    case 'seed-demo': {
+      // Rebuilds the sample company from dhyeya-demo-data.zip (or demo-data/).
+      const { ensureSampleCompany, removeSampleCompany } = await import('../modules/demo/service.js');
+      const { SAMPLE_COMPANY_ID } = await import('../modules/demo/constants.js');
+      if (process.argv.includes('--reset')) {
+        await removeSampleCompany();
+        console.log('Removed the existing sample company.');
+      }
+      await ensureSampleCompany();
+      const exists = await db('companies').where({ id: SAMPLE_COMPANY_ID }).first();
+      console.log(exists ? `Sample company ready: ${exists.name}` : 'Sample company was not created (see the warning above).');
+      break;
+    }
     case 'status': {
       const current = await db.migrate.currentVersion();
       console.log(`Current migration version: ${current}`);
       break;
     }
     default:
-      console.error('Usage: tsx src/db/cli.ts <migrate|rollback|seed|status>');
+      console.error('Usage: tsx src/db/cli.ts <migrate|rollback|seed|seed-demo [--reset]|status>');
       process.exitCode = 1;
   }
 }

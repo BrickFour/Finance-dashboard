@@ -26,7 +26,10 @@ const PERIOD_LABELS: Record<PeriodType, string> = {
 };
 
 export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
-  const { user, company, companies, selectCompany, financialYear, financialYears, selectFinancialYear, period, setPeriod, logout, can } = useApp();
+  const {
+    user, company, selectedCompany, previewingSample, companies, selectCompany, financialYear, financialYears, selectFinancialYear,
+    period, setPeriod, logout, can,
+  } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -85,8 +88,8 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
             trigger={
               <button className="flex items-center gap-2 px-2.5 h-9 rounded-control hover:bg-navy-50 transition-colors max-w-[190px] sm:max-w-[240px]">
                 <Building2 className="w-4 h-4 text-ink-muted shrink-0" />
-                <span className="text-sm font-medium text-ink truncate">{company?.name ?? 'Select a company'}</span>
-                {company?.isDemo && <Badge tone="warning">Demo</Badge>}
+                <span className="text-sm font-medium text-ink truncate">{selectedCompany?.name ?? 'Select a company'}</span>
+                {(selectedCompany?.isDemo || previewingSample) && <Badge tone="warning">{previewingSample ? 'Sample data' : 'Demo'}</Badge>}
                 <ChevronDown className="w-3.5 h-3.5 text-ink-muted shrink-0" />
               </button>
             }
@@ -104,11 +107,11 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
                         }}
                         className={cx(
                           'w-full text-left px-3 py-2 text-sm hover:bg-navy-50 transition-colors flex items-center justify-between gap-2',
-                          c.id === company?.id && 'bg-brand-50 text-brand-700 font-medium',
+                          c.id === selectedCompany?.id && 'bg-brand-50 text-brand-700 font-medium',
                         )}
                       >
                         <span className="truncate">{c.name}</span>
-                        {c.isDemo && <Badge tone="warning">Demo</Badge>}
+                        {c.isSample ? <Badge tone="warning">Sample</Badge> : c.isDemo ? <Badge tone="warning">Demo</Badge> : !c.hasData && <Badge tone="neutral">No data</Badge>}
                       </button>
                     </li>
                   ))}

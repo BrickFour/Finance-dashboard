@@ -10,6 +10,7 @@ import { capabilitiesFor, ROLE_LABELS, type Role } from './permissions.js';
 import { recordAudit } from '../audit/service.js';
 import { nowIso } from '../../lib/ids.js';
 import { env } from '../../config/env.js';
+import { SAMPLE_COMPANY_ID, isSampleCompany } from '../demo/constants.js';
 
 export const authRouter = Router();
 
@@ -88,11 +89,26 @@ authRouter.get(
       req.user!.role === 'admin'
         ? await db('companies').where({ is_active: true }).orderBy('name')
         : await db('companies')
-            .join('user_companies', 'companies.id', 'user_companies.company_id')
-            .where('user_companies.user_id', req.user!.id)
-            .andWhere('companies.is_active', true)
-            .orderBy('companies.name')
-            .select('companies.*');
+            .where(function () {
+              this.whereIn('id', db('user_companies').where('user_id', req.user!.id).select('company_id')).orWhere(
+                'id',
+                SAMPLE_COMPANY_ID,
+              );
+            })
+            .andWhere('is_active', true)
+            .orderBy('name');
+
+    // A company "has data" once it holds any accounting movement or opening
+    // position. Until then the client shows the sample company in its place.
+    const ids = companies.map((c: { id: string }) => c.id);
+    const withData = new Set<string>();
+    if (ids.length) {
+      const [v, o] = await Promise.all([
+        db('vouchers').whereIn('company_id', ids).distinct('company_id'),
+        db('opening_balances').whereIn('company_id', ids).distinct('company_id'),
+      ]);
+      for (const r of [...v, ...o]) withData.add(r.company_id);
+    }
 
     res.json({
       user: serialiseUser(user),
@@ -103,6 +119,8 @@ authRouter.get(
         currency: c.currency,
         currencyScale: c.currency_scale,
         isDemo: dialect.bool(c.is_demo),
+        isSample: isSampleCompany(c.id as string),
+        hasData: withData.has(c.id as string),
       })),
     });
   }),
