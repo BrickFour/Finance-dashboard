@@ -69,4 +69,26 @@ export async function seed(knex: Knex): Promise<void> {
       console.log(`  temporary password: ${adminPassword}  (change on first sign-in)`);
     }
   }
+
+  // ---- demo login (shown to clients; disable with DEMO_LOGIN=false) ----
+  if (process.env.DEMO_LOGIN !== 'false') {
+    const demoEmail = (process.env.DEMO_LOGIN_EMAIL ?? 'suvidha.deshmukh@brickfour.com').toLowerCase();
+    const demoPassword = process.env.DEMO_LOGIN_PASSWORD ?? 'Suvidha@123';
+    const existingDemo = await knex('users').where({ email: demoEmail }).first();
+    if (!existingDemo) {
+      await knex('users').insert({
+        id: `user-${createHash('sha256').update(demoEmail).digest('hex').slice(0, 32)}`,
+        email: demoEmail,
+        name: process.env.DEMO_LOGIN_NAME ?? 'Suvidha Deshmukh',
+        password_hash: await bcrypt.hash(demoPassword, 12),
+        role: 'admin',
+        is_active: true,
+        must_change_password: false,
+        created_at: now,
+        updated_at: now,
+      });
+      // eslint-disable-next-line no-console
+      console.log(`  created demo login ${demoEmail}`);
+    }
+  }
 }
