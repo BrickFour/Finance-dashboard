@@ -34,6 +34,29 @@ node dist/index.js
 
 Run it under a process manager (systemd, pm2) and keep `server/data` and `server/storage` (or `SQLITE_FILE` / `UPLOAD_DIR`) on persistent, backed-up storage.
 
+## 3. Vercel
+
+`vercel.json` builds the client as the static site and runs the API as one
+serverless function (`api/index.mjs` → `server/src/serverless.ts`). The first
+request on each instance migrates, seeds and builds the demo company (~5–10 s).
+
+In the Vercel project: **Root Directory** must be the repository root (where
+`vercel.json` is), Framework Preset **Other**, and leave the build/install/output
+overrides empty so `vercel.json` applies. Environment variables:
+
+| Variable | |
+| --- | --- |
+| `JWT_SECRET` | **Required.** Long random value; the API refuses to start without it. |
+| `BOOTSTRAP_ADMIN_PASSWORD` | **Required** in practice: the admin login. |
+| `BOOTSTRAP_ADMIN_EMAIL` | Optional, default `admin@dhyeya.local`. |
+| `DATABASE_URL` | Recommended. A Postgres connection string (Neon, Vercel Postgres, Supabase). |
+
+**Without `DATABASE_URL`** the API uses SQLite in `/tmp`, which Vercel wipes
+whenever an instance is recycled. The demo company and admin are rebuilt
+automatically, so the demo always works, but companies, users and imports you
+add are lost and are not shared between instances. Use `DATABASE_URL` for
+anything beyond a demo. Uploads are limited to 4.5 MB per request on Vercel.
+
 ## Production checklist
 
 - **TLS is required.** Put the app behind a reverse proxy (Caddy, nginx, a cloud load balancer) that terminates HTTPS. In production the session cookie is `Secure` and Helmet sends HSTS and `upgrade-insecure-requests`, so plain `http://` access (other than some `localhost` cases) will not keep a login. The app already trusts one proxy hop (`trust proxy = 1`).

@@ -15,7 +15,13 @@ function required(name: string, fallback?: string): string {
   return v;
 }
 
-const dbClient = (process.env.DB_CLIENT ?? 'sqlite3') as 'sqlite3' | 'pg';
+/** Running as a Vercel serverless function: only /tmp is writable, and it is not persistent. */
+const onVercel = Boolean(process.env.VERCEL);
+
+/** A Postgres connection string, as Neon / Vercel Postgres / Supabase provide it. */
+const databaseUrl = process.env.DATABASE_URL ?? process.env.POSTGRES_URL ?? null;
+
+const dbClient = (process.env.DB_CLIENT ?? (databaseUrl ? 'pg' : 'sqlite3')) as 'sqlite3' | 'pg';
 if (dbClient !== 'sqlite3' && dbClient !== 'pg') {
   throw new Error(`DB_CLIENT must be "sqlite3" or "pg", received "${dbClient}"`);
 }
@@ -38,21 +44,26 @@ export const env = {
   })(),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '12h',
 
+  onVercel,
+
   db: {
     client: dbClient,
-    sqliteFile: process.env.SQLITE_FILE ?? path.join(serverRoot, 'data', 'dhyeya.sqlite'),
+    sqliteFile: process.env.SQLITE_FILE ?? (onVercel ? '/tmp/arthsetu.sqlite' : path.join(serverRoot, 'data', 'dhyeya.sqlite')),
     pg: {
+      connectionString: databaseUrl,
       host: process.env.PGHOST ?? 'localhost',
       port: Number(process.env.PGPORT ?? 5432),
       user: process.env.PGUSER ?? 'dhyeya',
       password: process.env.PGPASSWORD ?? '',
       database: process.env.PGDATABASE ?? 'dhyeya',
-      ssl: process.env.PGSSL === 'true' ? { rejectUnauthorized: false } : undefined,
+      // Hosted Postgres behind a connection string requires TLS.
+      ssl:
+        process.env.PGSSL === 'true' || (databaseUrl && process.env.PGSSL !== 'false') ? { rejectUnauthorized: false } : undefined,
     },
   },
 
   /** Uploaded workbooks are written here. Never served over a public static route. */
-  uploadDir: process.env.UPLOAD_DIR ?? path.join(serverRoot, 'storage', 'uploads'),
+  uploadDir: process.env.UPLOAD_DIR ?? (onVercel ? '/tmp/uploads' : path.join(serverRoot, 'storage', 'uploads')),
   maxUploadBytes: Number(process.env.MAX_UPLOAD_BYTES ?? 25 * 1024 * 1024),
 
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:5173',

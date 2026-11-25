@@ -64,15 +64,18 @@ export const config: Knex.Config =
   env.db.client === 'pg'
     ? {
         client: 'pg',
-        connection: {
-          host: env.db.pg.host,
-          port: env.db.pg.port,
-          user: env.db.pg.user,
-          password: env.db.pg.password,
-          database: env.db.pg.database,
-          ssl: env.db.pg.ssl,
-        },
-        pool: { min: 2, max: 10 },
+        connection: env.db.pg.connectionString
+          ? { connectionString: env.db.pg.connectionString, ssl: env.db.pg.ssl }
+          : {
+              host: env.db.pg.host,
+              port: env.db.pg.port,
+              user: env.db.pg.user,
+              password: env.db.pg.password,
+              database: env.db.pg.database,
+              ssl: env.db.pg.ssl,
+            },
+        // Serverless instances are many and short-lived: hold no idle connections.
+        pool: env.onVercel ? { min: 0, max: 3 } : { min: 2, max: 10 },
         ...common,
       }
     : {

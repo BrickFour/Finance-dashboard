@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import bcrypt from 'bcryptjs';
+import { createHash } from 'node:crypto';
 import { SYSTEM_CATEGORIES } from '../../modules/mapping/categories.js';
 import { newId, nowIso } from '../../lib/ids.js';
 
@@ -47,7 +48,10 @@ export async function seed(knex: Knex): Promise<void> {
   const existingAdmin = await knex('users').where({ email: adminEmail }).first();
   if (!existingAdmin) {
     await knex('users').insert({
-      id: newId(),
+      // Derived from the email so every fresh database (e.g. one per serverless
+      // instance) gives the administrator the same id, and a session token
+      // stays valid whichever instance serves the request.
+      id: `admin-${createHash('sha256').update(adminEmail).digest('hex').slice(0, 32)}`,
       email: adminEmail,
       name: process.env.BOOTSTRAP_ADMIN_NAME ?? 'System Administrator',
       password_hash: await bcrypt.hash(adminPassword, 12),

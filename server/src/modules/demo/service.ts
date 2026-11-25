@@ -3,7 +3,7 @@ import path from 'node:path';
 import XLSX from 'xlsx';
 import { env } from '../../config/env.js';
 import { db } from '../../db/index.js';
-import { nowIso, newId } from '../../lib/ids.js';
+import { nowIso } from '../../lib/ids.js';
 import { logger } from '../../lib/logger.js';
 import { importWorkbooks, type WorkbookFile } from '../imports/bulk.js';
 import { refreshAlerts } from '../alerts/service.js';
@@ -86,7 +86,9 @@ export async function ensureSampleCompany(): Promise<void> {
   }
 
   const now = nowIso();
-  const fyId = newId();
+  // Fixed, like the company id, so a page's selected year still resolves on
+  // another freshly built database (one per serverless instance).
+  const fyId = `${SAMPLE_COMPANY_ID}-fy-2026-27`;
   await db('companies').insert({
     id: SAMPLE_COMPANY_ID,
     name: 'Sample Company (Demo)',
