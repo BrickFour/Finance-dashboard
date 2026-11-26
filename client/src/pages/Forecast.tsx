@@ -242,28 +242,6 @@ export function ForecastPage() {
         }
       />
 
-      {/* --------------------------------------------------- honesty banner */}
-      {active.learning ? (
-        <Callout tone="info" title="Learned from your own books — a statistical estimate, not a guarantee" className="mb-4">
-          How long each customer really takes to pay is learned from {formatNumber(active.learning.receivables.settledInvoicesLearned)} past
-          payments, then {formatNumber(active.learning.simulations)} futures are simulated. <strong>Expected</strong> is the middle outcome;{' '}
-          <strong>Best</strong> and <strong>Worst</strong> bound the likely range (8 in 10 outcomes fall between them).
-          {active.learning.shortfallProbability !== null && (
-            <>
-              {' '}
-              Chance of running short of cash during this period: <strong>{active.learning.shortfallProbability}%</strong>.
-            </>
-          )}{' '}
-          It cannot foresee a customer failing or a one-off event.
-        </Callout>
-      ) : (
-        <Callout tone="info" title="This is a rule-based projection, not a prediction" className="mb-4">
-          It walks your opening cash balance forward through dated events that already exist in your imported data, applying documented
-          collection assumptions (listed under Assumptions).{' '}
-          {active.learningUnavailableReason && <>The learned model is not used because: {active.learningUnavailableReason}</>}
-        </Callout>
-      )}
-
       {!baseline.openingCashAvailable && (
         <Callout tone="danger" title="No cash or bank ledger is mapped" className="mb-4">
           The projection starts from zero, which makes every balance below meaningless. Map at least one ledger to Cash and Bank first.

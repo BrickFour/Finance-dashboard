@@ -269,9 +269,6 @@ export function ExpensesPage() {
             description={`Due in the next 60 days · ${formatMoney(upcoming.total, currency)} in total`}
             icon={<CalendarClock className="w-4 h-4" />}
           />
-          <Callout tone="info" className="m-5 mb-0">
-            {upcoming.note}
-          </Callout>
           {upcoming.items.length === 0 ? (
             <EmptyState title="Nothing scheduled" description="No bills or recurring expenses fall due in this window." />
           ) : (

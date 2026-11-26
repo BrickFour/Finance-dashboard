@@ -5,7 +5,7 @@ import { db, dialect } from '../db/index.js';
 import { forbidden, unauthorized, notFound } from '../lib/errors.js';
 import type { Capability, Role } from '../modules/auth/permissions.js';
 import { can } from '../modules/auth/permissions.js';
-import { SAMPLE_COMPANY_ID, isSampleCompany, isAllowedSampleWrite } from '../modules/demo/constants.js';
+import { SAMPLE_COMPANY_IDS, isSampleCompany, isAllowedSampleWrite } from '../modules/demo/constants.js';
 
 export interface AuthUser {
   id: string;
@@ -140,5 +140,5 @@ export async function resolveCompany(req: Request, _res: Response, next: NextFun
 export async function accessibleCompanyIds(user: AuthUser): Promise<string[] | null> {
   if (user.role === 'admin') return null;
   const rows = await db('user_companies').where({ user_id: user.id }).select('company_id');
-  return [...rows.map((r: { company_id: string }) => r.company_id), SAMPLE_COMPANY_ID];
+  return [...rows.map((r: { company_id: string }) => r.company_id), ...SAMPLE_COMPANY_IDS];
 }

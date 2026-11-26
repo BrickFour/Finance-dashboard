@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
-import { LogoHorizontal, LogoMark } from '@/components/Logo';
+import { LogoHorizontal, LogoTile } from '@/components/Logo';
 import { Tooltip } from '@/components/ui';
 import { useApp } from '@/state/AppContext';
 import { visibleGroups } from './navigation';
@@ -21,19 +21,19 @@ export function Sidebar({
   const groups = visibleGroups(user?.capabilities ?? []);
 
   const content = (
-    <nav className="flex flex-col h-full bg-surface border-r border-line" aria-label="Main navigation">
+    <nav className="flex flex-col h-full bg-navy-gradient text-navy-100 border-r border-navy-950" aria-label="Main navigation">
       {/* ---- logo ---- */}
-      <div className={cx('flex items-center border-b border-line shrink-0', collapsed ? 'justify-center h-[61px] px-2' : 'justify-between h-[61px] px-4')}>
+      <div className={cx('flex items-center border-b border-white/10 shrink-0', collapsed ? 'justify-center h-[61px] px-2' : 'justify-between h-[61px] px-4')}>
         {collapsed ? (
           <Tooltip content="ArthSetu — CEO Finance Dashboard" side="right">
-            <LogoMark size={30} />
+            <LogoTile size={28} />
           </Tooltip>
         ) : (
           <>
-            <LogoHorizontal markSize={32} />
+            <LogoHorizontal markSize={28} onDark />
             <button
               onClick={onCloseMobile}
-              className="lg:hidden p-1.5 -mr-1.5 text-ink-muted hover:text-ink rounded-control hover:bg-navy-50"
+              className="lg:hidden p-1.5 -mr-1.5 text-navy-200 hover:text-white rounded-control hover:bg-white/10"
               aria-label="Close navigation"
             >
               <X className="w-4 h-4" />
@@ -43,10 +43,10 @@ export function Sidebar({
       </div>
 
       {/* ---- modules ---- */}
-      <div className="flex-1 overflow-y-auto py-3 px-2.5 space-y-4">
+      <div className="flex-1 overflow-y-auto sidebar-scroll py-4 px-2.5 space-y-5">
         {groups.map((group) => (
           <div key={group.label}>
-            {!collapsed && <p className="label-text px-2.5 mb-1.5">{group.label}</p>}
+            {!collapsed && <p className="px-2.5 mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-navy-300/80">{group.label}</p>}
             <ul className="space-y-0.5">
               {group.items.map((item) => {
                 const Icon = item.icon;
@@ -60,8 +60,8 @@ export function Sidebar({
                         'relative flex items-center gap-2.5 rounded-control text-sm transition-colors duration-150 group',
                         collapsed ? 'justify-center h-9 w-9 mx-auto' : 'px-2.5 py-2',
                         isActive
-                          ? 'bg-brand-50 text-brand-700 font-medium'
-                          : 'text-ink-muted hover:bg-navy-50 hover:text-ink',
+                          ? 'bg-white/[0.12] text-white font-medium shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]'
+                          : 'text-navy-200 hover:bg-white/[0.07] hover:text-white',
                       )
                     }
                   >
@@ -70,7 +70,7 @@ export function Sidebar({
                         {isActive && !collapsed && (
                           <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-brand-gradient" aria-hidden />
                         )}
-                        <Icon className={cx('w-4 h-4 shrink-0', isActive && 'text-brand')} />
+                        <Icon className={cx('w-4 h-4 shrink-0', isActive ? 'text-cyan-300' : 'text-navy-300 group-hover:text-white')} />
                         {!collapsed && <span className="truncate">{item.label}</span>}
                       </>
                     )}
@@ -95,11 +95,11 @@ export function Sidebar({
       </div>
 
       {/* ---- collapse ---- */}
-      <div className="border-t border-line p-2.5 shrink-0 hidden lg:block">
+      <div className="border-t border-white/10 p-2.5 shrink-0 hidden lg:block">
         <button
           onClick={onToggleCollapsed}
           className={cx(
-            'flex items-center gap-2.5 w-full rounded-control text-xs text-ink-muted hover:bg-navy-50 hover:text-ink transition-colors',
+            'flex items-center gap-2.5 w-full rounded-control text-xs text-navy-300 hover:bg-white/[0.07] hover:text-white transition-colors',
             collapsed ? 'justify-center h-9' : 'px-2.5 py-2',
           )}
           aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}

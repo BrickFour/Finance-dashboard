@@ -417,7 +417,6 @@ function AddFinancialYearDialog({
           </Field>
         </div>
 
-        <Callout tone="info">Financial years cannot overlap, so a transaction can only ever belong to one of them.</Callout>
       </div>
     </Dialog>
   );

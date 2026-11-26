@@ -72,11 +72,11 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
   }, [company, location.pathname, can]);
 
   return (
-    <header className="sticky top-0 z-20 bg-surface/90 backdrop-blur-md border-b border-line no-print">
+    <header className="sticky top-0 z-20 bg-navy-900 border-b border-navy-950 shadow-[0_1px_3px_rgba(10,25,49,0.25)] no-print">
       <div className="flex items-center gap-2 h-[61px] px-3 sm:px-4">
         <button
           onClick={onOpenMobileNav}
-          className="lg:hidden p-2 -ml-1 text-ink-muted hover:text-ink rounded-control hover:bg-navy-50"
+          className="lg:hidden p-2 -ml-1 text-navy-200 hover:text-white rounded-control hover:bg-white/10"
           aria-label="Open navigation"
         >
           <Menu className="w-5 h-5" />
@@ -86,11 +86,11 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
         {companies.length > 0 && (
           <Dropdown
             trigger={
-              <button className="flex items-center gap-2 px-2.5 h-9 rounded-control hover:bg-navy-50 transition-colors max-w-[190px] sm:max-w-[240px]">
-                <Building2 className="w-4 h-4 text-ink-muted shrink-0" />
-                <span className="text-sm font-medium text-ink truncate">{selectedCompany?.name ?? 'Select a company'}</span>
+              <button className="flex items-center gap-2 px-3 h-9 rounded-control bg-white/[0.06] border border-white/10 hover:bg-white/[0.12] transition-colors max-w-[200px] sm:max-w-[280px]">
+                <Building2 className="w-4 h-4 text-cyan-300 shrink-0" />
+                <span className="text-sm font-medium text-white truncate">{selectedCompany?.name ?? 'Select a company'}</span>
                 {(selectedCompany?.isDemo || previewingSample) && <Badge tone="warning">{previewingSample ? 'Sample data' : 'Demo'}</Badge>}
-                <ChevronDown className="w-3.5 h-3.5 text-ink-muted shrink-0" />
+                <ChevronDown className="w-3.5 h-3.5 text-navy-300 shrink-0" />
               </button>
             }
           >
@@ -136,10 +136,10 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
         {showFinanceControls && financialYears.length > 0 && (
           <Dropdown
             trigger={
-              <button className="hidden sm:flex items-center gap-2 px-2.5 h-9 rounded-control hover:bg-navy-50 transition-colors">
-                <Calendar className="w-4 h-4 text-ink-muted shrink-0" />
-                <span className="text-sm text-ink whitespace-nowrap">{financialYear?.label ?? 'Financial year'}</span>
-                <ChevronDown className="w-3.5 h-3.5 text-ink-muted" />
+              <button className="hidden sm:flex items-center gap-2 px-3 h-9 rounded-control bg-white/[0.06] border border-white/10 hover:bg-white/[0.12] transition-colors">
+                <Calendar className="w-4 h-4 text-cyan-300 shrink-0" />
+                <span className="text-sm text-white whitespace-nowrap">{financialYear?.label ?? 'Financial year'}</span>
+                <ChevronDown className="w-3.5 h-3.5 text-navy-300" />
               </button>
             }
           >
@@ -202,11 +202,11 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
                 : 'All figures come from Excel imports. Nothing has been imported for this company yet.'
             }
           >
-            <div className="hidden md:flex items-center gap-1.5 px-2.5 h-8 rounded-full bg-navy-50 border border-line">
-              <Database className="w-3.5 h-3.5 text-ink-muted" />
-              <span className="text-2xs font-medium text-ink-muted whitespace-nowrap">Excel Import</span>
-              <span className="w-px h-3 bg-line-strong" aria-hidden />
-              <span className="text-2xs text-ink-subtle whitespace-nowrap">{lastImport ? formatRelative(lastImport) : 'no data'}</span>
+            <div className="hidden md:flex items-center gap-1.5 px-2.5 h-8 rounded-full bg-white/[0.06] border border-white/10">
+              <Database className="w-3.5 h-3.5 text-navy-300" />
+              <span className="text-2xs font-medium text-navy-100 whitespace-nowrap">Excel Import</span>
+              <span className="w-px h-3 bg-white/20" aria-hidden />
+              <span className="text-2xs text-navy-300 whitespace-nowrap">{lastImport ? formatRelative(lastImport) : 'no data'}</span>
             </div>
           </Tooltip>
         )}
@@ -215,7 +215,7 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
         {showFinanceControls && (
           <button
             onClick={() => setSearchOpen(true)}
-            className="hidden sm:flex items-center gap-2 h-9 px-2.5 rounded-control hover:bg-navy-50 text-ink-muted transition-colors"
+            className="hidden sm:flex items-center gap-2 h-9 px-2.5 rounded-control hover:bg-white/10 text-navy-200 hover:text-white transition-colors"
             aria-label="Search modules"
           >
             <Search className="w-4 h-4" />
@@ -233,12 +233,12 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
         {can('alerts.view') && (
           <button
             onClick={() => navigate('/alerts')}
-            className="relative p-2 text-ink-muted hover:text-ink rounded-control hover:bg-navy-50 transition-colors"
+            className="relative p-2 text-navy-200 hover:text-white rounded-control hover:bg-white/10 transition-colors"
             aria-label={`Alerts${unread ? `, ${unread} unread` : ''}`}
           >
             <Bell className="w-[18px] h-[18px]" />
             {unread > 0 && (
-              <span className="absolute top-1 right-1 min-w-[15px] h-[15px] px-1 rounded-full bg-danger text-white text-[9px] font-semibold flex items-center justify-center tabular">
+              <span className="absolute top-1 right-1 min-w-[15px] h-[15px] px-1 rounded-full bg-danger text-white text-[9px] font-semibold flex items-center justify-center tabular ring-2 ring-navy-900">
                 {unread > 9 ? '9+' : unread}
               </span>
             )}
@@ -249,11 +249,11 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
         <Dropdown
           align="right"
           trigger={
-            <button className="flex items-center gap-2 pl-1.5 pr-2 h-9 rounded-control hover:bg-navy-50 transition-colors">
-              <span className="w-7 h-7 rounded-full bg-navy-gradient text-white text-2xs font-semibold flex items-center justify-center shrink-0">
+            <button className="flex items-center gap-2 pl-1.5 pr-2 h-9 rounded-control hover:bg-white/10 transition-colors">
+              <span className="w-7 h-7 rounded-full bg-brand-gradient ring-2 ring-white/20 text-white text-2xs font-semibold flex items-center justify-center shrink-0">
                 {initials(user?.name ?? '')}
               </span>
-              <ChevronDown className="w-3.5 h-3.5 text-ink-muted hidden sm:block" />
+              <ChevronDown className="w-3.5 h-3.5 text-navy-300 hidden sm:block" />
             </button>
           }
         >

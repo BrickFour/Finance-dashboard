@@ -187,11 +187,6 @@ export function ReportsPage() {
         description="Every export reflects the company, financial year, period and filters currently selected, and contains real imported or calculated data."
       />
 
-      <Callout tone="neutral" className="mb-4">
-        Reports are management information produced from imported accounting data. They are not audited financial statements and have not
-        been reviewed or certified by a chartered accountant. Every PDF and Excel export says so on its face.
-      </Callout>
-
       <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">
         {reports.map((r) => (
           <Card key={r.key} className={cx('flex flex-col', !r.ready && 'bg-navy-50/40')}>
@@ -300,20 +295,6 @@ export function AlertsPage() {
           )
         }
       />
-
-      <Callout tone="info" title="How alerts are delivered" className="mb-4">
-        <ul className="space-y-1 mt-1">
-          <li>
-            <strong>In the app:</strong> {data.delivery.inApp.status}
-          </li>
-          <li>
-            <strong>Background scheduler:</strong> {data.delivery.scheduler.status}
-          </li>
-          <li>
-            <strong>Email summaries:</strong> {data.delivery.email.status}
-          </li>
-        </ul>
-      </Callout>
 
       <Tabs
         tabs={[

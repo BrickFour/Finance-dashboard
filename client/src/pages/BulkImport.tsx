@@ -100,12 +100,6 @@ export function BulkImport() {
 
   return (
     <div className="space-y-4">
-      <Callout tone="info" title="Upload everything in one go">
-        Select all your workbooks together. ArthSetu reads each sheet's headings to work out what it holds (ledgers, opening balances, vouchers,
-        receivables and so on), maps the columns, and imports them in the right order. Rows that cannot be read are kept for download rather than
-        dropped. For a file it cannot recognise, use <strong>New import</strong> to map it by hand.
-      </Callout>
-
       {!financialYear && (
         <Callout tone="warning">
           No financial year is selected. Opening balances need one — select it in the top bar before importing, or that file will be reported as failed.

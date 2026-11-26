@@ -57,39 +57,6 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: 'Data',
-    items: [
-      {
-        path: '/companies',
-        label: 'Companies & Years',
-        icon: Building2,
-        capability: 'companies.view',
-        description: 'Company profiles and financial years',
-      },
-      {
-        path: '/import',
-        label: 'Excel Import Center',
-        icon: FileSpreadsheet,
-        capability: 'imports.view',
-        description: 'Upload, map and validate workbooks',
-      },
-      {
-        path: '/account-mapping',
-        label: 'Account Mapping',
-        icon: ListChecks,
-        capability: 'mapping.view',
-        description: 'Classify ledgers into financial categories',
-      },
-      {
-        path: '/reconciliation',
-        label: 'Data Reconciliation',
-        icon: ShieldCheck,
-        capability: 'reconciliation.view',
-        description: 'Compare imported balances with a reference report',
-      },
-    ],
-  },
-  {
     label: 'Position',
     items: [
       { path: '/cash-and-bank', label: 'Cash and Bank', icon: Wallet, capability: 'cash.view', description: 'Balances and movement per account' },
@@ -140,6 +107,15 @@ export const NAV_GROUPS: NavGroup[] = [
       { path: '/users', label: 'Users & Roles', icon: Users, capability: 'users.manage', description: 'Accounts, roles and company access' },
       { path: '/audit', label: 'Audit Logs', icon: ClipboardList, capability: 'audit.view', description: 'Record of sensitive actions' },
       { path: '/settings', label: 'Settings', icon: Settings, capability: 'settings.view', description: 'Thresholds, buckets and integrations' },
+    ],
+  },
+  {
+    label: 'Data',
+    items: [
+      { path: '/companies', label: 'Companies & Years', icon: Building2, capability: 'companies.view', description: 'Company profiles and financial years' },
+      { path: '/import', label: 'Excel Import Center', icon: FileSpreadsheet, capability: 'imports.view', description: 'Upload, map and validate workbooks' },
+      { path: '/account-mapping', label: 'Account Mapping', icon: ListChecks, capability: 'mapping.view', description: 'Classify ledgers into financial categories' },
+      { path: '/reconciliation', label: 'Data Reconciliation', icon: ShieldCheck, capability: 'reconciliation.view', description: 'Compare imported balances with a reference report' },
     ],
   },
 ];

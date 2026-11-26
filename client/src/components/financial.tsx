@@ -1,4 +1,4 @@
-import { Fragment, useState, type ReactNode } from 'react';
+﻿import { Fragment, useState, type ReactNode } from 'react';
 import { ArrowDownRight, ArrowUpRight, ChevronRight, HelpCircle, Minus, ShieldAlert, Sigma, TriangleAlert } from 'lucide-react';
 import { Badge, Callout, Card, Tooltip } from '@/components/ui';
 import { cx, formatAmount, formatMoney, formatMoneyCompact, formatPercent, type CurrencyConfig } from '@/lib/format';
@@ -142,9 +142,9 @@ export function DataQualityBanner({
   onFix?: () => void;
   className?: string;
 }) {
-  if (!quality || quality.warnings.length === 0) return null;
-
-  const severe = quality.unmappedLedgerCount > 0;
+  // Only an actual gap in the figures earns space on the page; informational notes do not.
+  const severe = Boolean(quality && quality.unmappedLedgerCount > 0);
+  if (!quality || quality.warnings.length === 0 || !severe) return null;
 
   return (
     <Callout
@@ -382,61 +382,9 @@ export function PageHeader({
 /* --------------------------------------------------------- explainer panel */
 
 /**
- * §26 asks every complex feature to say what it does, why it matters, what it
- * needs and what to do next. This renders that consistently.
+ * Pages still describe themselves through this component, but the client-facing
+ * build keeps the screens free of help panels, so it renders nothing.
  */
-export function Explainer({
-  what,
-  why,
-  needs,
-  next,
-  className,
-}: {
-  what: string;
-  why: string;
-  needs?: string;
-  next?: string;
-  className?: string;
-}) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className={cx('rounded-card border border-line bg-navy-50/40', className)}>
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left"
-        aria-expanded={open}
-      >
-        <span className="text-xs font-medium text-ink inline-flex items-center gap-2">
-          <HelpCircle className="w-3.5 h-3.5 text-ink-muted" />
-          About this page
-        </span>
-        <ChevronRight className={cx('w-3.5 h-3.5 text-ink-muted transition-transform', open && 'rotate-90')} />
-      </button>
-      {open && (
-        <dl className="px-4 pb-3.5 pt-0.5 space-y-2 text-xs leading-relaxed animate-fade-in">
-          <div>
-            <dt className="font-semibold text-ink">What it does</dt>
-            <dd className="text-ink-muted">{what}</dd>
-          </div>
-          <div>
-            <dt className="font-semibold text-ink">Why it matters</dt>
-            <dd className="text-ink-muted">{why}</dd>
-          </div>
-          {needs && (
-            <div>
-              <dt className="font-semibold text-ink">What it needs</dt>
-              <dd className="text-ink-muted">{needs}</dd>
-            </div>
-          )}
-          {next && (
-            <div>
-              <dt className="font-semibold text-ink">What to do next</dt>
-              <dd className="text-ink-muted">{next}</dd>
-            </div>
-          )}
-        </dl>
-      )}
-    </div>
-  );
+export function Explainer(_props: { what: string; why: string; needs?: string; next?: string; className?: string }) {
+  return null;
 }

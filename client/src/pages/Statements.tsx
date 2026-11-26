@@ -523,7 +523,12 @@ export function ExportButtons({ reportKey, scope }: { reportKey: string; scope: 
   );
 }
 
-export function MethodologyNote({ items, generatedAt }: { items: string[]; generatedAt?: string }) {
+export function MethodologyNote(_props: { items: string[]; generatedAt?: string }) {
+  // Kept out of the client-facing screens; MethodologyNoteDetail renders it if it is wanted again.
+  return null;
+}
+
+export function MethodologyNoteDetail({ items, generatedAt }: { items: string[]; generatedAt?: string }) {
   return (
     <div className="mt-4 rounded-card border border-line bg-navy-50/40 px-4 py-3">
       <p className="text-xs font-medium text-ink mb-1.5 flex items-center gap-1.5">

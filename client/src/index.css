@@ -39,6 +39,15 @@
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-ink-subtle bg-clip-content;
   }
+
+  /* Quiet scrollbar on the dark navigation. */
+  .sidebar-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+  }
+  .sidebar-scroll::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.16);
+  }
 }
 
 @layer components {

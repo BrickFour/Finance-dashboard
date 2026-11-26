@@ -352,10 +352,6 @@ export function MyCustomersPage() {
     <>
       <PageHeader title="My Customers" description="Outstanding and payment status for the accounts assigned to you." />
 
-      <Callout tone="info" className="mb-4">
-        {data.scopeNote}
-      </Callout>
-
       {data.documents.length === 0 ? (
         <Card>
           <EmptyState

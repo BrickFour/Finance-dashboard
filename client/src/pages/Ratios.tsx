@@ -172,12 +172,6 @@ export function RatiosPage() {
         </Card>
       ) : (
         <>
-          <Callout tone="neutral" className="mb-4">
-            {availableCount} of {data.ratios.length} ratios can be calculated from the current data. The rest say why they cannot, rather
-            than showing a misleading figure. No ratio here is described as good or bad — that depends on your industry and season, which
-            this product cannot see.
-          </Callout>
-
           {data.warnings.map((w, i) => (
             <Callout key={i} tone="warning" className="mb-4">
               {w}
@@ -228,10 +222,6 @@ export function RatiosPage() {
               />
             </Card>
           )}
-
-          <Callout tone="neutral" className="mt-4">
-            {data.benchmarkNote}
-          </Callout>
         </>
       )}
 

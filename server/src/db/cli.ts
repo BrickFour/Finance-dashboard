@@ -61,14 +61,18 @@ async function main() {
     case 'seed-demo': {
       // Rebuilds the sample company from dhyeya-demo-data.zip (or demo-data/).
       const { ensureSampleCompany, removeSampleCompany } = await import('../modules/demo/service.js');
-      const { SAMPLE_COMPANY_ID } = await import('../modules/demo/constants.js');
+      const { SAMPLE_COMPANY_IDS } = await import('../modules/demo/constants.js');
       if (process.argv.includes('--reset')) {
         await removeSampleCompany();
-        console.log('Removed the existing sample company.');
+        console.log('Removed the existing sample companies.');
       }
       await ensureSampleCompany();
-      const exists = await db('companies').where({ id: SAMPLE_COMPANY_ID }).first();
-      console.log(exists ? `Sample company ready: ${exists.name}` : 'Sample company was not created (see the warning above).');
+      const ready = await db('companies').whereIn('id', SAMPLE_COMPANY_IDS).select('name');
+      console.log(
+        ready.length
+          ? `Sample companies ready: ${ready.map((r: { name: string }) => r.name).join(', ')}`
+          : 'No sample company was created (see the warning above).',
+      );
       break;
     }
     case 'status': {

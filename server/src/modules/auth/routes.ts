@@ -10,7 +10,7 @@ import { capabilitiesFor, ROLE_LABELS, type Role } from './permissions.js';
 import { recordAudit } from '../audit/service.js';
 import { nowIso } from '../../lib/ids.js';
 import { env } from '../../config/env.js';
-import { SAMPLE_COMPANY_ID, isSampleCompany } from '../demo/constants.js';
+import { SAMPLE_COMPANY_IDS, isSampleCompany } from '../demo/constants.js';
 
 export const authRouter = Router();
 
@@ -90,9 +90,9 @@ authRouter.get(
         ? await db('companies').where({ is_active: true }).orderBy('name')
         : await db('companies')
             .where(function () {
-              this.whereIn('id', db('user_companies').where('user_id', req.user!.id).select('company_id')).orWhere(
+              this.whereIn('id', db('user_companies').where('user_id', req.user!.id).select('company_id')).orWhereIn(
                 'id',
-                SAMPLE_COMPANY_ID,
+                SAMPLE_COMPANY_IDS,
               );
             })
             .andWhere('is_active', true)
