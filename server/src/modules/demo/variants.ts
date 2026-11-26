@@ -23,6 +23,10 @@ export interface SampleVariant {
   costFactor: number;
   /** Rupees of share capital paid into the main bank account at the start of the year (sets the cash outlook). */
   capitalInjection: number;
+  /** Sales multiplier for each month April → October: the company's seasonality. */
+  salesSeason: number[];
+  /** Multiplier per operating-expense ledger: the company's spending mix (default 1). */
+  expenseMix: Record<string, number>;
   /** Original text → this company's text; applied to every text cell, longest match first. */
   replace: Record<string, string>;
   /** Replaces the seven stock items in order: [name, unit]. */
@@ -40,6 +44,9 @@ export const SAMPLE_VARIANTS: SampleVariant[] = [
     scale: 1.5,
     costFactor: 0.9,
     capitalInjection: 2_500_000,
+    // Monsoon-season demand for anti-infectives and syrups.
+    salesSeason: [0.82, 0.9, 1.18, 1.38, 1.32, 1.04, 0.9],
+    expenseMix: { 'Marketing & Advertising': 1.7, 'Professional Fees': 1.5, 'Travel & Conveyance': 1.35, Rent: 0.8, 'Repairs & Maintenance': 0.7 },
     replace: {
       'Acme Traders': 'Sanjivani Medical Agencies',
       'Vertex Industries': 'Arogya Pharma Distributors',
@@ -88,6 +95,9 @@ export const SAMPLE_VARIANTS: SampleVariant[] = [
     scale: 0.8,
     costFactor: 0.95,
     capitalInjection: 2_000_000,
+    // Quiet summer, then the festive season.
+    salesSeason: [0.92, 0.84, 0.76, 0.8, 1.08, 1.42, 1.72],
+    expenseMix: { 'Marketing & Advertising': 2.1, 'Freight Inward': 1.6, Electricity: 1.3, 'Professional Fees': 0.7, 'Travel & Conveyance': 0.8 },
     replace: {
       'Acme Traders': 'Namma Mart Supermarkets',
       'Vertex Industries': 'Udupi Fresh Retail',
@@ -136,7 +146,10 @@ export const SAMPLE_VARIANTS: SampleVariant[] = [
     address: 'Plot 221, Sachin GIDC, Surat, Gujarat 394230',
     scale: 1.2,
     costFactor: 1,
-    capitalInjection: 1_500_000,
+    capitalInjection: 3_200_000,
+    // Wedding season in spring, a monsoon slump, then Diwali.
+    salesSeason: [1.34, 1.2, 0.74, 0.62, 0.86, 1.24, 1.52],
+    expenseMix: { Electricity: 1.85, 'Factory Wages': 1.4, 'Repairs & Maintenance': 1.3, 'Marketing & Advertising': 0.55, 'Travel & Conveyance': 0.7 },
     replace: {
       'Acme Traders': 'Banarasi Silk House',
       'Vertex Industries': 'Trendline Apparel',
@@ -187,6 +200,9 @@ export const SAMPLE_VARIANTS: SampleVariant[] = [
     scale: 2.2,
     costFactor: 0.88,
     capitalInjection: 4_500_000,
+    // Steady growth as new OEM programmes ramp up.
+    salesSeason: [0.68, 0.79, 0.9, 1.02, 1.14, 1.28, 1.41],
+    expenseMix: { 'Repairs & Maintenance': 1.9, Electricity: 1.55, 'Factory Wages': 1.3, Rent: 0.7, 'Marketing & Advertising': 0.6 },
     replace: {
       'Acme Traders': 'Torque Motors Ltd',
       'Vertex Industries': 'Speedline Two-Wheelers',
@@ -326,6 +342,24 @@ function slug(name: string): string {
 
 /* ---------------------------------------------------------------- transform */
 
+/** A stable pseudo-random multiplier in [1 - spread, 1 + spread] for a key. */
+function jitter(key: string, spread: number): number {
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i++) {
+    h ^= key.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return 1 + spread * (((h >>> 0) / 4294967295) * 2 - 1);
+}
+
+/** Index into a season (0 = April … 6 = October) for an Excel date serial, or -1. */
+function seasonIndex(serial: number | null): number {
+  if (serial === null) return -1;
+  const month = new Date(Math.round((serial - 25569) * 864e5)).getUTCMonth();
+  const idx = month - 3;
+  return idx >= 0 && idx <= 6 ? idx : -1;
+}
+
 /** Builds one variant company's workbooks from the original demo workbooks. */
 export function buildVariantWorkbooks(files: WorkbookFile[], v: SampleVariant): WorkbookFile[] {
   const books = files.map((f) => ({ name: f.originalname, wb: XLSX.read(f.buffer, { type: 'buffer', cellNF: true }) }));
@@ -341,11 +375,17 @@ export function buildVariantWorkbooks(files: WorkbookFile[], v: SampleVariant): 
   }
   const isOperatingExpense = (ledger: string) => EXPENSE_GROUPS.has(groupOf.get(ledger) ?? '') && !NOT_OPERATING.has(ledger);
   const isMoney = (ledger: string) => MONEY_GROUPS.has(groupOf.get(ledger) ?? '');
+  const mix = (ledger: string) => v.expenseMix[ledger] ?? 1;
 
   const costScale = v.scale * v.costFactor;
-  const costVouchers = new Set<string>();
+  // Purchases run a month ahead of sales, a little flatter.
+  const purchaseSeason = v.salesSeason.map((_, i) => 1 + ((v.salesSeason[Math.min(i + 1, 6)] ?? 1) - 1) * 0.8);
 
-  // Vouchers first: they decide which payments are operating costs.
+  /** Multiplier for an invoice or bill this year, keyed by its reference; receipts, payments and ageing rows follow it. */
+  const docFactor = new Map<string, number>();
+  /** Final multiplier for each voucher number, so expense rows can follow their payment. */
+  const voucherFactor = new Map<string, number>();
+
   for (const b of books.filter((x) => /voucher/i.test(x.name))) {
     const g = first(b.wb);
     if (!g) continue;
@@ -354,15 +394,38 @@ export function buildVariantWorkbooks(files: WorkbookFile[], v: SampleVariant): 
       const key = `${str(g, r, 'Voucher Type')}|${str(g, r, 'Voucher Number')}`;
       byVoucher.set(key, [...(byVoucher.get(key) ?? []), r]);
     }
+
+    // Pass 1: this year's invoices and bills get the company's season plus a little noise.
+    for (const [key, lineRows] of byVoucher) {
+      const [type] = key.split('|');
+      if (type !== 'Sales' && type !== 'Purchase') continue;
+      const ref = str(g, lineRows[0]!, 'Reference');
+      const idx = seasonIndex(num(g, lineRows[0]!, 'Transaction Date'));
+      if (!ref || idx < 0) continue;
+      const season = type === 'Sales' ? v.salesSeason[idx]! : purchaseSeason[idx]!;
+      docFactor.set(ref, season * jitter(`${v.id}|${ref}`, 0.14));
+    }
+
+    // Pass 2: scale every voucher, keeping it balanced.
     for (const [key, lineRows] of byVoucher) {
       const [type, number] = key.split('|');
       const ledgers = lineRows.map((r) => str(g, r, 'Ledger Name'));
       const operating =
         type === 'Payment' && ledgers.some(isOperatingExpense) && ledgers.every((l) => isOperatingExpense(l) || isMoney(l));
-      if (operating) costVouchers.add(number!);
-      scaleBalanced(g, lineRows, operating ? costScale : v.scale);
+      const ref = str(g, lineRows[0]!, 'Reference');
+      let factor = v.scale;
+      if (operating) {
+        const expenseLedger = ledgers.find(isOperatingExpense)!;
+        factor = costScale * mix(expenseLedger) * jitter(`${v.id}|${number}`, 0.1);
+      } else if (docFactor.has(ref)) {
+        factor = v.scale * docFactor.get(ref)!;
+      }
+      voucherFactor.set(number!, factor);
+      scaleBalanced(g, lineRows, factor);
     }
   }
+
+  const docScale = (ref: string) => v.scale * (docFactor.get(ref) ?? 1);
 
   for (const b of books) {
     const g = first(b.wb);
@@ -387,16 +450,18 @@ export function buildVariantWorkbooks(files: WorkbookFile[], v: SampleVariant): 
       }
     } else if (/receivables/i.test(name)) {
       for (const r of rows(g)) {
-        const inv = Math.round((num(g, r, 'Invoice Amount') ?? 0) * v.scale);
-        const rec = Math.round((num(g, r, 'Amount Received') ?? 0) * v.scale);
+        const f = docScale(str(g, r, 'Invoice Number'));
+        const inv = Math.round((num(g, r, 'Invoice Amount') ?? 0) * f);
+        const rec = Math.min(inv, Math.round((num(g, r, 'Amount Received') ?? 0) * f));
         setNum(g, r, 'Invoice Amount', inv);
         setNum(g, r, 'Amount Received', rec);
         setNum(g, r, 'Outstanding Amount', inv - rec);
       }
     } else if (/payables/i.test(name)) {
       for (const r of rows(g)) {
-        const bill = Math.round((num(g, r, 'Bill Amount') ?? 0) * v.scale);
-        const paid = Math.round((num(g, r, 'Amount Paid') ?? 0) * v.scale);
+        const f = docScale(str(g, r, 'Bill Number'));
+        const bill = Math.round((num(g, r, 'Bill Amount') ?? 0) * f);
+        const paid = Math.min(bill, Math.round((num(g, r, 'Amount Paid') ?? 0) * f));
         setNum(g, r, 'Bill Amount', bill);
         setNum(g, r, 'Amount Paid', paid);
         setNum(g, r, 'Outstanding Amount', bill - paid);
@@ -417,20 +482,28 @@ export function buildVariantWorkbooks(files: WorkbookFile[], v: SampleVariant): 
       for (const r of rows(g)) {
         const amount = num(g, r, 'Amount');
         if (amount === null) continue;
-        setNum(g, r, 'Amount', Math.round(amount * (costVouchers.has(str(g, r, 'Reference')) ? costScale : v.scale)));
+        setNum(g, r, 'Amount', Math.round(amount * (voucherFactor.get(str(g, r, 'Reference')) ?? v.scale)));
       }
-    } else if (/budgets|recurring/i.test(name)) {
-      const amountCol = g.header.has('Budget Amount') ? 'Budget Amount' : 'Amount';
+    } else if (/budgets/i.test(name)) {
+      // Budgets follow the spending mix, but not exactly, so utilisation differs by category and company.
       for (const r of rows(g)) {
-        const amount = num(g, r, amountCol);
+        const amount = num(g, r, 'Budget Amount');
         if (amount === null) continue;
-        const f = isOperatingExpense(str(g, r, 'Category')) ? costScale : v.scale;
-        setNum(g, r, amountCol, Math.round(amount * f));
+        const cat = str(g, r, 'Category');
+        const f = isOperatingExpense(cat) ? costScale * mix(cat) * jitter(`${v.id}|budget|${cat}`, 0.22) : v.scale;
+        setNum(g, r, 'Budget Amount', Math.round(amount * f));
+      }
+    } else if (/recurring/i.test(name)) {
+      for (const r of rows(g)) {
+        const amount = num(g, r, 'Amount');
+        if (amount === null) continue;
+        const cat = str(g, r, 'Category');
+        setNum(g, r, 'Amount', Math.round(amount * (isOperatingExpense(cat) ? costScale * mix(cat) : v.scale)));
       }
     } else if (/commitments/i.test(name)) {
       for (const r of rows(g)) {
         const amount = num(g, r, 'Amount');
-        if (amount !== null) setNum(g, r, 'Amount', Math.round(amount * v.scale));
+        if (amount !== null) setNum(g, r, 'Amount', Math.round(amount * v.scale * jitter(`${v.id}|${r}`, 0.3)));
       }
     } else if (/customers/i.test(name)) {
       // Contact e-mails follow the renamed customer, so nothing points at the original names.

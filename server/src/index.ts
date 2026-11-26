@@ -4,6 +4,7 @@ import { env } from './config/env.js';
 import { db, closeDb, normalizeMigrationNames } from './db/index.js';
 import { logger } from './lib/logger.js';
 import { ensureSampleCompany } from './modules/demo/service.js';
+import { closeMongo, loadFromMongoOnStart, persistBootstrap } from './db/mongoStore.js';
 
 async function main() {
   // The upload directory holds financial source documents. 0700 keeps it readable
@@ -34,6 +35,10 @@ async function main() {
     process.exit(1);
   }
 
+  // With MONGO_URI set, MongoDB holds the lasting data: load it, then make sure the
+  // administrator and demo login exist (idempotent).
+  if (await loadFromMongoOnStart()) await db.seed.run();
+
   // The sample company lets a new client see the product working before they
   // import anything. Failing to build it must never stop the server.
   try {
@@ -42,10 +47,12 @@ async function main() {
     logger.warn('The sample company could not be created.', { reason: err instanceof Error ? err.message : String(err) });
   }
 
+  await persistBootstrap();
+
   const app = createApp();
 
   const server = app.listen(env.port, () => {
-    logger.info(`ArthSetu API listening on http://localhost:${env.port}`, {
+    logger.info(`BrickFour API listening on http://localhost:${env.port}`, {
       env: env.nodeEnv,
       database: env.db.client,
       dataSource: 'excel_import',
@@ -55,6 +62,7 @@ async function main() {
   const shutdown = async (signal: string) => {
     logger.info(`${signal} received, shutting down.`);
     server.close(async () => {
+      await closeMongo();
       await closeDb();
       process.exit(0);
     });

@@ -113,7 +113,7 @@ export function CompaniesPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <h2 className="text-sm font-semibold text-ink">{c.name}</h2>
                       {c.id === active?.id && <Badge tone="brand">Selected</Badge>}
-                      {c.isSample ? <Badge tone="warning">Sample company — demo data, read-only</Badge> : c.isDemo && <Badge tone="warning">Demo — synthetic data</Badge>}
+                      {c.isSample ? <Badge tone="info">Demo company</Badge> : c.isDemo && <Badge tone="warning">Demo — synthetic data</Badge>}
                     </div>
                     <p className="text-xs text-ink-muted mt-1">
                       {c.entityLabel} · {c.currency}
@@ -133,7 +133,7 @@ export function CompaniesPage() {
                         Select
                       </Button>
                     )}
-                    {can('companies.manage') && !c.isSample && (
+                    {can('companies.manage') && (
                       <Button size="sm" icon={<CalendarPlus className="w-3.5 h-3.5" />} onClick={() => setFyFor(c)}>
                         Add financial year
                       </Button>

@@ -1,3 +1,4 @@
+import { mongoMiddleware } from './db/mongoStore.js';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -75,6 +76,9 @@ export function createApp() {
       });
     }),
   );
+
+  // Keeps MongoDB in step with every change (no-op without MONGO_URI).
+  app.use('/api', mongoMiddleware);
 
   app.use('/api/auth', authRouter);
   app.use('/api/companies', companiesRouter);

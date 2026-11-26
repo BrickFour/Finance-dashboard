@@ -23,11 +23,11 @@ export const BRAND = {
 
 const argb = (hex: string) => `FF${hex.replace('#', '').toUpperCase()}`;
 
-/** Resolves the ArthSetu logo asset, which is shared with the web client. */
+/** Resolves the BrickFour logo asset, which is shared with the web client. */
 function logoPath(): string | null {
   const candidates = [
-    path.resolve(__dirname, '../../../assets/arthsetu-logo.png'),
-    path.resolve(__dirname, '../../../../client/public/arthsetu-logo.png'),
+    path.resolve(__dirname, '../../../assets/brickfour-logo.png'),
+    path.resolve(__dirname, '../../../../client/public/brickfour-logo.png'),
   ];
   for (const c of candidates) {
     if (fs.existsSync(c)) return c;
@@ -82,15 +82,15 @@ export async function buildPdf(meta: ReportMeta, sections: ReportSection[]): Pro
 
     if (logo) {
       try {
-        doc.image(logo, 40, 36, { fit: [54, 54] });
+        doc.image(logo, 40, 38, { fit: [100, 51] });
       } catch {
         /* a missing or unreadable logo must not prevent the export */
       }
     }
 
-    const textX = logo ? 104 : 40;
-    doc.fillColor(BRAND.navy).fontSize(18).font('Helvetica-Bold').text('ArthSetu', textX, 40);
-    doc.fillColor(BRAND.muted).fontSize(8).font('Helvetica').text('CEO FINANCE DASHBOARD', textX, 62, { characterSpacing: 1.2 });
+    const textX = logo ? 152 : 40;
+    doc.fillColor(BRAND.navy).fontSize(18).font('Helvetica-Bold').text('BrickFour', textX, 44);
+    doc.fillColor(BRAND.muted).fontSize(8).font('Helvetica').text('CEO FINANCE DASHBOARD', textX, 66, { characterSpacing: 1.2 });
 
     doc.fillColor(BRAND.text).fontSize(15).font('Helvetica-Bold').text(meta.reportTitle, 40, 100, { width: pageWidth });
     doc.fillColor(BRAND.navy).fontSize(11).font('Helvetica-Bold').text(meta.companyName, 40, 122, { width: pageWidth });
@@ -229,7 +229,7 @@ export async function buildPdf(meta: ReportMeta, sections: ReportSection[]): Pro
 
 export async function buildExcel(meta: ReportMeta, sections: ReportSection[]): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'ArthSetu - CEO Finance Dashboard';
+  wb.creator = 'BrickFour - CEO Finance Dashboard';
   wb.created = new Date();
 
   // ---- cover sheet carrying the report context ----
@@ -239,7 +239,7 @@ export async function buildExcel(meta: ReportMeta, sections: ReportSection[]): P
     { key: 'v', width: 80 },
   ];
 
-  const title = info.addRow({ k: 'ArthSetu', v: meta.reportTitle });
+  const title = info.addRow({ k: 'BrickFour', v: meta.reportTitle });
   title.getCell(1).font = { bold: true, size: 14, color: { argb: argb(BRAND.navy) } };
   title.getCell(2).font = { bold: true, size: 12, color: { argb: argb(BRAND.text) } };
   info.addRow({});

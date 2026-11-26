@@ -49,9 +49,11 @@ overrides empty so `vercel.json` applies. Environment variables:
 | `JWT_SECRET` | **Required.** Long random value; the API refuses to start without it. |
 | `BOOTSTRAP_ADMIN_PASSWORD` | **Required** in practice: the admin login. |
 | `BOOTSTRAP_ADMIN_EMAIL` | Optional, default `admin@dhyeya.local`. |
-| `DATABASE_URL` | Recommended. A Postgres connection string (Neon, Vercel Postgres, Supabase). |
+| `MONGO_URI` | Recommended. MongoDB connection string; all data is kept there (one collection per table) and survives restarts. |
+| `MONGO_DB_NAME` | Database name in MongoDB (default `brickfour_finance`). |
+| `DATABASE_URL` | Alternative to MongoDB: a Postgres connection string (Neon, Vercel Postgres, Supabase). |
 
-**Without `DATABASE_URL`** the API uses SQLite in `/tmp`, which Vercel wipes
+**With `MONGO_URI`** each instance loads its working SQLite copy from MongoDB on start (a few seconds), writes every change back before responding, and reloads when another instance has written. **Without `MONGO_URI` or `DATABASE_URL`** the API uses SQLite in `/tmp`, which Vercel wipes
 whenever an instance is recycled. The demo company and admin are rebuilt
 automatically, so the demo always works, but companies, users and imports you
 add are lost and are not shared between instances. Use `DATABASE_URL` for

@@ -134,6 +134,7 @@ importsRouter.post(
       created_at: now,
       updated_at: now,
     });
+    await db('import_files').insert({ batch_id: batchId, company_id: req.companyId, content: req.file.buffer, created_at: now });
 
     await recordAudit({
       action: 'import.uploaded',
@@ -178,7 +179,7 @@ importsRouter.get(
     const batch = await loadBatch(req.params.batchId, req);
     const category = getCategory(batch.category);
 
-    const buffer = await fs.readFile(batch.stored_path);
+    const buffer = await readBatchFile(batch);
     const wb = readWorkbook(buffer, batch.file_name);
     const sheets = summariseSheets(wb);
 
@@ -261,7 +262,7 @@ importsRouter.post(
     const input = validateSchema.parse(req.body);
     const category = getCategory(batch.category);
 
-    const buffer = await fs.readFile(batch.stored_path);
+    const buffer = await readBatchFile(batch);
     const wb = readWorkbook(buffer, batch.file_name);
     const sheet = readSheet(wb, input.sheetName, { headerRowIndex: input.headerRowIndex });
 
@@ -336,7 +337,7 @@ importsRouter.post(
       headerRowIndex: 0,
     });
 
-    const buffer = await fs.readFile(batch.stored_path);
+    const buffer = await readBatchFile(batch);
     const wb = readWorkbook(buffer, batch.file_name);
     const sheet = readSheet(wb, batch.sheet_name, { headerRowIndex: stored.headerRowIndex });
 
@@ -768,3 +769,18 @@ function serialiseBatch(b: Record<string, any>, categoryLabel: string) {
 }
 
 export { normalizeName };
+
+/** The uploaded workbook for a batch: from disk when it is still there, otherwise from the database copy. */
+async function readBatchFile(batch: { id: string; stored_path: string | null }): Promise<Buffer> {
+  if (batch.stored_path) {
+    try {
+      return await fs.readFile(batch.stored_path);
+    } catch {
+      /* fall back to the stored copy */
+    }
+  }
+  const row = await db('import_files').where({ batch_id: batch.id }).first();
+  if (!row) throw badRequest('The uploaded file for this import is no longer available. Upload it again to continue.');
+  const content = row.content as Buffer | Uint8Array | { buffer: ArrayBuffer };
+  return Buffer.isBuffer(content) ? content : Buffer.from(content as Uint8Array);
+}

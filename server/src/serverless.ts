@@ -12,6 +12,7 @@ import { env } from './config/env.js';
 import { db, normalizeMigrationNames } from './db/index.js';
 import { logger } from './lib/logger.js';
 import { ensureSampleCompany } from './modules/demo/service.js';
+import { loadFromMongoOnStart, persistBootstrap } from './db/mongoStore.js';
 
 let ready: Promise<Express> | null = null;
 
@@ -19,12 +20,15 @@ async function bootstrap(): Promise<Express> {
   fs.mkdirSync(env.uploadDir, { recursive: true });
   await normalizeMigrationNames();
   await db.migrate.latest();
+  // With MONGO_URI set, MongoDB holds the lasting data: load it before anything else.
+  await loadFromMongoOnStart();
   await db.seed.run();
   try {
     await ensureSampleCompany();
   } catch (err) {
     logger.warn('The sample company could not be created.', { reason: err instanceof Error ? err.message : String(err) });
   }
+  await persistBootstrap();
   return createApp();
 }
 

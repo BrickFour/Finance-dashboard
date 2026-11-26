@@ -178,8 +178,12 @@ export async function loadBalances(companyId: string, period: PeriodRef, opts: B
     const opening = declared ?? masterOpening;
     if (!opening) withoutOpening++;
 
-    const prior = priorMovement.get(l.id) ?? { debit: 0, credit: 0, count: 0 };
     const movement = periodMovement.get(l.id) ?? { debit: 0, credit: 0, count: 0 };
+    // Income and expense accounts report what happened in the period, so movement
+    // earlier in the year belongs to an earlier period, not to this one's figure.
+    // (Without this a month or quarter showed the year-to-date total.)
+    const isPl = categories.get(l.category_key as string)?.statement === 'PL';
+    const prior = isPl ? { debit: 0, credit: 0, count: 0 } : (priorMovement.get(l.id) ?? { debit: 0, credit: 0, count: 0 });
 
     const openingDebit = (opening?.side === 'debit' ? opening.amount : 0) + prior.debit;
     const openingCredit = (opening?.side === 'credit' ? opening.amount : 0) + prior.credit;

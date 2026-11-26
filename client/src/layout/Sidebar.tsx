@@ -25,7 +25,7 @@ export function Sidebar({
       {/* ---- logo ---- */}
       <div className={cx('flex items-center border-b border-white/10 shrink-0', collapsed ? 'justify-center h-[61px] px-2' : 'justify-between h-[61px] px-4')}>
         {collapsed ? (
-          <Tooltip content="ArthSetu — CEO Finance Dashboard" side="right">
+          <Tooltip content="BrickFour — CEO Finance Dashboard" side="right">
             <LogoTile size={28} />
           </Tooltip>
         ) : (

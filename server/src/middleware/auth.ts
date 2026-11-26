@@ -116,8 +116,11 @@ export async function resolveCompany(req: Request, _res: Response, next: NextFun
     if (!company) throw notFound('Company not found.');
 
     if (isSampleCompany(companyId)) {
-      // The sample company is open to everyone to look at, and changed by no one.
-      if (!isAllowedSampleWrite(req.method, req.originalUrl.split('?')[0])) {
+      // The sample companies are open to everyone. They are fully usable for a
+      // demonstration (each role's capabilities still apply), unless
+      // SAMPLE_READ_ONLY=true locks them to viewing only.
+      const readOnly = (process.env.SAMPLE_READ_ONLY ?? 'false').toLowerCase() === 'true';
+      if (readOnly && !isAllowedSampleWrite(req.method, req.originalUrl.split('?')[0])) {
         throw forbidden(
           'The sample company is read-only. Create your own company in Companies & Years and import your workbooks to work with your own figures.',
         );
