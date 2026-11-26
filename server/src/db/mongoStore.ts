@@ -40,8 +40,21 @@ type TableInfo = { name: string; columns: string[]; pk: string[]; deps: string[]
 let tableInfo: TableInfo[] | null = null;
 let suspendTracking = false;
 
+/** Set when MongoDB could not be reached at start; this instance then runs on its local copy only. */
+let unavailable = false;
+
 export function mongoEnabled(): boolean {
-  return Boolean(process.env.MONGO_URI) && env.db.client === 'sqlite3';
+  return !unavailable && Boolean(process.env.MONGO_URI) && env.db.client === 'sqlite3';
+}
+
+function disableAfter(err: unknown): void {
+  unavailable = true;
+  const message = (err instanceof Error ? err.message : String(err)).replace(/mongodb(\+srv)?:\/\/[^@\s]+@/g, 'mongodb://***@');
+  const hint = /SSL|TLS|alert|ENOTFOUND|timed out|Server selection/i.test(message)
+    ? ' This usually means MongoDB Atlas is not accepting connections from this server: allow its IP address (on Vercel, 0.0.0.0/0) under Network Access.'
+    : '';
+  logger.error(`MongoDB is not reachable; running on the local database only, and changes will not be kept.${hint}`, { error: message });
+  void closeMongo();
 }
 
 async function mongo(): Promise<Db> {
@@ -273,14 +286,23 @@ export async function loadFromMongoOnStart(): Promise<boolean> {
     return false;
   }
   startTracking();
-  return restoreFromMongo();
+  try {
+    return await restoreFromMongo();
+  } catch (err) {
+    disableAfter(err);
+    return false;
+  }
 }
 
 /** Call after seeding: writes anything new (on a first run, everything) to MongoDB. */
 export async function persistBootstrap(): Promise<void> {
   if (!mongoEnabled()) return;
-  await ensureCollections();
-  await flushToMongo(true);
+  try {
+    await ensureCollections();
+    await flushToMongo(true);
+  } catch (err) {
+    disableAfter(err);
+  }
 }
 
 /* ---------------------------------------------------------------- middleware */

@@ -67,6 +67,32 @@ authRouter.post(
   }),
 );
 
+/**
+ * One-click sign-in as the demo account, for showing the product. The password
+ * never reaches the browser. Off when DEMO_LOGIN=false.
+ */
+authRouter.get('/demo-login', (_req, res) => {
+  res.json({ enabled: process.env.DEMO_LOGIN !== 'false' });
+});
+
+authRouter.post(
+  '/demo-login',
+  loginLimiter,
+  asyncHandler(async (req, res) => {
+    if (process.env.DEMO_LOGIN === 'false') throw forbidden('The demo login is turned off.');
+    const email = (process.env.DEMO_LOGIN_EMAIL ?? 'suvidha.deshmukh@brickfour.com').toLowerCase();
+    const user = await db('users').where({ email }).first();
+    if (!user || !dialect.bool(user.is_active)) throw unauthorized('The demo account is not available.');
+
+    await db('users').where({ id: user.id }).update({ last_login_at: nowIso() });
+    const token = signToken({ id: user.id, email: user.email, role: user.role });
+    res.cookie('dhyeya_token', token, { httpOnly: true, sameSite: 'lax', secure: env.isProd, maxAge: 12 * 60 * 60 * 1000 });
+    await recordAudit({ action: 'auth.login', summary: `${user.email} signed in (demo login)`, req, userOverride: { id: user.id, email: user.email } });
+
+    res.json({ token, user: serialiseUser(user) });
+  }),
+);
+
 authRouter.post(
   '/logout',
   authenticate,

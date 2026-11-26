@@ -86,6 +86,8 @@ interface AppState {
   error: string | null;
 
   login: (email: string, password: string) => Promise<void>;
+  /** One-click sign-in as the demo account. */
+  demoLogin: () => Promise<void>;
   logout: () => Promise<void>;
   selectCompany: (id: string) => void;
   selectFinancialYear: (id: string) => void;
@@ -211,6 +213,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [applyCompanies],
   );
 
+  const demoLogin = useCallback(async () => {
+    const res = await api.post<{ token: string; user: User }>('/auth/demo-login', {});
+    setAuthToken(res.token);
+    setUser(res.user);
+    const me = await api.get<{ user: User; companies: Company[] }>('/auth/me', undefined, { noCompany: true });
+    applyCompanies(me.companies, null);
+  }, [applyCompanies]);
+
   const logout = useCallback(async () => {
     try {
       await api.post('/auth/logout');
@@ -299,6 +309,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       loading,
       error,
       login,
+      demoLogin,
       logout,
       selectCompany,
       selectFinancialYear,
@@ -316,7 +327,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }),
     [
       user, companies, company, selectedCompany, sampleCompany, previewingSample, financialYears, financialYear, period,
-      loading, error, login, logout, selectCompany, selectFinancialYear, refreshCompanies, refreshUser, can,
+      loading, error, login, demoLogin, logout, selectCompany, selectFinancialYear, refreshCompanies, refreshUser, can,
     ],
   );
 

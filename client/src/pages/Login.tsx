@@ -1,17 +1,18 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Database, Lock, ShieldCheck } from 'lucide-react';
+import { Database, Lock, PlayCircle, ShieldCheck } from 'lucide-react';
 import { LogoFull } from '@/components/Logo';
 import { Button, Callout, Field, Input } from '@/components/ui';
 import { useApp } from '@/state/AppContext';
 import { ApiError } from '@/lib/api';
 
 export function LoginPage() {
-  const { user, login, loading } = useApp();
+  const { user, login, demoLogin, loading } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [demoSubmitting, setDemoSubmitting] = useState(false);
 
   if (loading) {
     return (
@@ -33,6 +34,18 @@ export function LoginPage() {
       setError(err instanceof ApiError ? err.message : 'Sign-in failed. Please try again.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const onDemo = async () => {
+    setError(null);
+    setDemoSubmitting(true);
+    try {
+      await demoLogin();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'The demo could not be opened. Please try again.');
+    } finally {
+      setDemoSubmitting(false);
     }
   };
 
@@ -83,6 +96,26 @@ export function LoginPage() {
               Sign in
             </Button>
           </form>
+
+          <div className="flex items-center gap-3 my-5" aria-hidden>
+            <span className="flex-1 h-px bg-line" />
+            <span className="text-2xs uppercase tracking-wider text-ink-subtle">or</span>
+            <span className="flex-1 h-px bg-line" />
+          </div>
+
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            fullWidth
+            loading={demoSubmitting}
+            disabled={submitting}
+            icon={<PlayCircle className="w-4 h-4" />}
+            onClick={onDemo}
+          >
+            Quick demo login
+          </Button>
+          <p className="text-2xs text-ink-muted text-center mt-2">Explore five demo companies with complete sample data.</p>
 
           <p className="text-2xs text-ink-subtle text-center mt-6 leading-relaxed">
             Access is role-based and every sign-in, import and export is recorded in the audit log.
